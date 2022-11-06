@@ -46,6 +46,20 @@ public class BookController {
         return bookService.modifyBook(newBook);
     }
 
+    @RequestMapping("/searchBook")
+    public List<Book> searchBook(@RequestParam("keyword")String keyword){
+        System.out.println("searchBook----"+keyword);
+        return bookService.searchBook(keyword);
+    }
+
+    @RequestMapping("/setBookSolr")
+    void addBookSolr(){
+        System.out.println("Get Request To Add Book");
+        bookService.setBookSolr();
+    }
+
+
+
 
     //暂时没用上
 //    @RequestMapping("/addToOrder")

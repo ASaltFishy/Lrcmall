@@ -11,6 +11,7 @@
     />
     <el-button type="primary" @click="searchnow">搜索</el-button>
     <!-- 添加也只有管理员页面可显示 -->
+    <el-button type="primary" @click="fullTextSearch">全文搜索</el-button>
     <el-button type="primary" @click="addBooks" v-if=admin>添加</el-button>
   </div>
 
@@ -110,12 +111,12 @@
   <div class="booklist">
     <el-table :data="showData" border>
       <el-table-column type="selection" width="55" />
-      <el-table-column label="封面" width="110">
+      <el-table-column label="封面" width="110"  v-if=!fullText>
         <template v-slot="scope">
-          <img :src="scope.row.image" alt="" height="50" />
+          <img :src="scope.row.image" alt="" height="50"  />
         </template>
       </el-table-column>
-      <el-table-column label="书名">
+      <el-table-column label="书名" width="150">
         <template v-slot="scope">
           <el-link @click="skiptodetail(scope.row.bookId)">{{
             scope.row.name
@@ -123,10 +124,12 @@
         </template>
       </el-table-column>
       <el-table-column prop="author" label="作者" width="140" />
-      <el-table-column prop="bookType" label="图书分类" width="120" sortable />
-      <el-table-column prop="surplus" label="库存" width="120" sortable>
+      <el-table-column prop="bookType" label="图书分类" width="120" v-if=!fullText sortable />
+      <el-table-column prop="surplus" label="库存" width="120" v-if=!fullText sortable>
       </el-table-column>
-      <el-table-column prop="price" label="单价" width="120" sortable />
+      <el-table-column prop="price" label="单价" width="120" v-if=!fullText sortable />
+      <!-- 只有使用全文搜索功能时简介这一栏才会显示 -->
+      <el-table-column prop="discription" label="简介" v-if=fullText />
 
       <!-- 删除这个只有管理员界面才可显示 -->
       <el-table-column label="操作" width="160" v-if=admin>
@@ -159,6 +162,7 @@ export default {
   data() {
     return {
       admin:false,
+      fullText:true,
       input: "",
       showData: null,
       tableData: null, //save the initial booklist
@@ -205,11 +209,15 @@ export default {
   methods: {
     //recover the whole data while blur
     recoverdata() {
-      if (this.input == "") this.showData = this.tableData;
+      if (this.input == "") {
+        this.showData = this.tableData;
+        this.fullText = false;
+      }
     },
     //   搜索实现
     searchnow() {
       let bookname = this.input;
+      this.fullText = false;
       let searchitem = [];
       var temp = String(this.input).toUpperCase();
       this.tableData.forEach(function (item) {
@@ -219,7 +227,23 @@ export default {
       });
       this.showData = JSON.parse(JSON.stringify(searchitem));
     },
+    //全文搜索
+    fullTextSearch(){
+      instance.get("/searchBook", {
+          params: {
+            keyword: this.input
+          }
+        })
+      .then((res) => {
+        let tempData = res.data;
+        console.log(tempData);
+        this.tableData = tempData;
+        this.showData = this.tableData;
+        this.fullText = true;
+      });
+    },
     skiptodetail(bookid) {
+      this.fullText = false;
       this.$router.push({
         path: "/home/detail",
         query: { id: bookid},

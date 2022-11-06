@@ -110,6 +110,8 @@ export default {
 .home-layout .el-main {
   background-color: #ecf5ff;
   height: 100%;
+  width: 100%;
+  margin: auto
 }
 
 .home-layout .logoimg>img {

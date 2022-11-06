@@ -10,4 +10,6 @@ public interface BookService {
     boolean deleteBook(String bookName);
     boolean addBook(Book newBook);
     boolean modifyBook(Book newBook);
+    List<Book> searchBook(String keyword);
+    void setBookSolr();
 }

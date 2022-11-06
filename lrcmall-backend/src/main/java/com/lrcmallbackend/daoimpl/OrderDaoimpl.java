@@ -1,10 +1,13 @@
 package com.lrcmallbackend.daoimpl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lrcmallbackend.dao.OrderDao;
 import com.lrcmallbackend.entity.*;
 import com.lrcmallbackend.repository.BookRepository;
 import com.lrcmallbackend.repository.OrderRepository;
 import com.lrcmallbackend.repository.UserRepository;
+import com.lrcmallbackend.util.RedisUtil;
 import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -24,6 +27,19 @@ public class OrderDaoimpl implements OrderDao {
     UserRepository userRepository;
     @Autowired
     BookRepository bookRepository;
+    @Autowired
+    RedisUtil redisUtil;
+    @Autowired
+    ObjectMapper objectMapper;
+
+    private void addToRedis(Book b) throws JsonProcessingException {
+        int id = b.getBookId();
+        System.out.println("book: "+id+" is not in Redis, add it into Redis now!");
+        Map map = objectMapper.readValue(objectMapper.writeValueAsString(b),Map.class);
+        redisUtil.hmset("book:"+id,map);
+        //将主键保存为一个list，遍历时方便查询
+        redisUtil.lSet("book:id",id);
+    }
 
     @Override
     public Order checkCart(User owner){
@@ -109,12 +125,14 @@ public class OrderDaoimpl implements OrderDao {
             if(cart.getType()==0){
                 List<OrderItem> items = cart.getItems();
                 for(int j=0;j<items.size();j++){
-                    int bookId = items.get(j).getBook().getBookId();
+                    int bookid = items.get(j).getBook().getBookId();
                     int number = items.get(j).getNumber();
-                    Book book = bookRepository.getById(bookId);
-                    book.setSurplus(book.getSurplus()-number);
-                    pay+=book.getPrice()*number;
-                    bookRepository.saveAndFlush(book);
+                    //decrease the book surplus
+                    Book temp = bookRepository.getById(bookid);
+                    int s = temp.getSurplus()-number;
+                    temp.setSurplus(s);
+                    pay += temp.getPrice()*number;
+                    bookRepository.saveAndFlush(temp);
                 }
                 Date date = new Date();
                 orders.get(i).setType(1);

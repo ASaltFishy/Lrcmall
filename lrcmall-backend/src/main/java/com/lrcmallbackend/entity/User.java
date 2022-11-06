@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.*;
 import com.sun.istack.NotNull;
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Proxy;
 
 import javax.persistence.*;
 import java.util.ArrayList;

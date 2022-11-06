@@ -18,7 +18,7 @@ function useSocket(id) {
     //     reconnectionAttempts: Infinity, // 重新连接尝试次数 (Infinity),
     //     reconnectionDelay: 2000, // 重新连接时间间隔
     // })
-    socket = new WebSocket( "ws://localhost:8080/websocket/order/" +id);
+    socket = new WebSocket( "wss://localhost:8443/websocket/order/" +id);
     socket.onopen = function () {
         console.log("websocket已打开");
       };
