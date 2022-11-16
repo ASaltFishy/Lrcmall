@@ -12,6 +12,7 @@
     <el-button type="primary" @click="searchnow">搜索</el-button>
     <!-- 添加也只有管理员页面可显示 -->
     <el-button type="primary" @click="fullTextSearch">全文搜索</el-button>
+    <el-button type="primary" @click="microSearch">微服务搜索</el-button>
     <el-button type="primary" @click="addBooks" v-if=admin>添加</el-button>
   </div>
 
@@ -154,7 +155,7 @@
 <script>
 import pagination from "./pagination.vue";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { instance } from "@/axios/axios";
+import { instance , microInstance } from "@/axios/axios";
 // import { tableData } from "../main.js";
 
 export default {
@@ -162,7 +163,7 @@ export default {
   data() {
     return {
       admin:false,
-      fullText:true,
+      fullText:false,
       input: "",
       showData: null,
       tableData: null, //save the initial booklist
@@ -202,15 +203,15 @@ export default {
           item.price = (item.price / 100).toFixed(2);
         });
         console.log(tempData);
-        this.tableData = tempData;
-        this.showData = this.tableData;
+        this.tableData = JSON.parse(JSON.stringify(tempData));
+        this.showData = JSON.parse(JSON.stringify(this.tableData));
       });
   },
   methods: {
     //recover the whole data while blur
     recoverdata() {
       if (this.input == "") {
-        this.showData = this.tableData;
+        this.showData = JSON.parse(JSON.stringify(this.tableData));
         this.fullText = false;
       }
     },
@@ -237,9 +238,22 @@ export default {
       .then((res) => {
         let tempData = res.data;
         console.log(tempData);
-        this.tableData = tempData;
-        this.showData = this.tableData;
+        this.showData = JSON.parse(JSON.stringify(tempData));
         this.fullText = true;
+      });
+    },
+    microSearch(){
+      microInstance.get("/bookSearch/getBook",{
+        params: {
+            bookName: this.input
+          }
+      })
+      .then((res) => {
+        let tempData = res.data;
+        console.log(tempData);
+        this.showData = JSON.parse(JSON.stringify(tempData));
+        this.fullText = false;
+        console.log(this.tableData);
       });
     },
     skiptodetail(bookid) {
@@ -266,7 +280,7 @@ export default {
           };
           data=JSON.stringify(data);
       instance
-        .post("/addBook", data)
+        .get("/addBook", data)
         .then((res) => {
               if (res.data == true) {
                 ElMessage({

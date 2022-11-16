@@ -58,9 +58,6 @@ public class BookController {
         bookService.setBookSolr();
     }
 
-
-
-
     //暂时没用上
 //    @RequestMapping("/addToOrder")
 //    public BigDecimal addOrderItem(@RequestBody List<Map> orderlist, @RequestParam("userid") int userId){
