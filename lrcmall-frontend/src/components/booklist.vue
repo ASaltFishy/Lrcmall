@@ -13,6 +13,7 @@
     <!-- 添加也只有管理员页面可显示 -->
     <el-button type="primary" @click="fullTextSearch">全文搜索</el-button>
     <el-button type="primary" @click="microSearch">微服务搜索</el-button>
+    <el-button type="primary" @click="SearchByTag">按标签搜索</el-button>
     <el-button type="primary" @click="addBooks" v-if=admin>添加</el-button>
   </div>
 
@@ -241,6 +242,18 @@ export default {
         this.showData = JSON.parse(JSON.stringify(tempData));
         this.fullText = true;
       });
+    },
+    SearchByTag(){
+      instance.get("/searchByTag",{
+        params:{
+          tag:this.input
+        }
+      })
+      .then((res)=>{
+        let tempData = res.data;
+        console.log(tempData);
+        this.showData = JSON.parse(JSON.stringify(tempData));
+      })
     },
     microSearch(){
       microInstance.get("/bookSearch/getBook",{

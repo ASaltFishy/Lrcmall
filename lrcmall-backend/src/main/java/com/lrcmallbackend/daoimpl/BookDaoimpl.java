@@ -4,19 +4,26 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lrcmallbackend.dao.BookDao;
 import com.lrcmallbackend.entity.Book;
+import com.lrcmallbackend.entity.BookImage;
+import com.lrcmallbackend.entity.BookType;
+import com.lrcmallbackend.repository.BookImageRepository;
 import com.lrcmallbackend.repository.BookRepository;
+import com.lrcmallbackend.repository.BookTypeRepository;
 import com.lrcmallbackend.util.RedisUtil;
-import io.lettuce.core.RedisCommandTimeoutException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Repository
 public class BookDaoimpl implements BookDao {
     @Autowired
     BookRepository bookRepository;
+    @Autowired
+    BookImageRepository bookImageRepository;
+    @Autowired
+    BookTypeRepository bookTypeRepository;
+
     @Autowired
     RedisUtil redisUtil;
     @Autowired
@@ -34,39 +41,54 @@ public class BookDaoimpl implements BookDao {
 
     @Override
     public List<Book> getBooks() {
-        return bookRepository.findBooksByShowStatus(1);
+        List<Book> list = bookRepository.findBooksByShowStatus(1);
+        int size = list.size();
+        for (int i = 0; i < size; i++) {
+            Book temp = list.get(i);
+            temp.setImage(bookImageRepository.findById(i + 1).get().getUrl());
+            list.set(i, temp);
+        }
+        return list;
     }
 
+    // get book detail using redis
+//    @Override
+//    public Book getBookDetail(int bookId) {
+//        System.out.println("Searching book: " + bookId + " in Redis");
+//        Book ret;
+//        try {
+//            Object b = redisUtil.hmget("book:" + bookId);
+//            try {
+//                System.out.println(objectMapper.writeValueAsString(b));
+//                if (objectMapper.writeValueAsString(b).equals("{}")) {
+//                    ret = bookRepository.getById(bookId);
+//                    try {
+//                        addToRedis(ret);
+//                    } catch (JsonProcessingException e) {
+//                        e.printStackTrace();
+//                    }
+//                } else {
+//                    System.out.println("Book: " + bookId + " already in Redis!");
+//                    ret = objectMapper.readValue(objectMapper.writeValueAsString(b), Book.class);
+//                }
+//            } catch (JsonProcessingException e) {
+//                e.printStackTrace();
+//                ret = null;
+//            }
+//        } catch (RedisCommandTimeoutException e) {
+//            System.out.println("Redis 连接断开，直接从数据库获取book: " + bookId);
+//            ret = bookRepository.getById(bookId);
+//        }
+//        return ret;
+//    }
     @Override
     public Book getBookDetail(int bookId) {
-        System.out.println("Searching book: " + bookId + " in Redis");
-        Book ret;
-        try {
-            Object b = redisUtil.hmget("book:" + bookId);
-            try {
-                System.out.println(objectMapper.writeValueAsString(b));
-                if (objectMapper.writeValueAsString(b).equals("{}")) {
-                    ret = bookRepository.getById(bookId);
-                    try {
-                        addToRedis(ret);
-                    } catch (JsonProcessingException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    System.out.println("Book: " + bookId + " already in Redis!");
-                    ret = objectMapper.readValue(objectMapper.writeValueAsString(b), Book.class);
-                }
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                ret = null;
-            }
-        } catch (RedisCommandTimeoutException e) {
-            System.out.println("Redis 连接断开，直接从数据库获取book: " + bookId);
-            ret = bookRepository.getById(bookId);
-        }
+        Book ret = bookRepository.getById(bookId);
+        Optional<BookImage> image = bookImageRepository.findById(bookId);
+        String url = image.get().getUrl();
+        ret.setImage(image.get().getUrl());
         return ret;
     }
-
 
     @Override
     public int addItemList(List<Map> orderlist, int orderId) {
@@ -76,34 +98,12 @@ public class BookDaoimpl implements BookDao {
             int number = Integer.parseInt(orderlist.get(i).get("number").toString());
             //decrease the book surplus
             Book temp;
-//            try {
-//                Object b = redisUtil.get("book:" + bookid);
-//                if (b == null) {
             temp = bookRepository.getById(bookid);
-//                    try {
-//                        addToRedis(temp);
-//                    } catch (JsonProcessingException e) {
-//                        e.printStackTrace();
-//                    }
-//                } else {
-//                    System.out.println("Book: " + bookid + " already in Redis!");
-//                    try {
-//                        temp = objectMapper.readValue(objectMapper.writeValueAsString(redisUtil.hmget("book:" + bookid)), Book.class);
-//                    } catch (JsonProcessingException e) {
-//                        e.printStackTrace();
-//                        temp = null;
-//                    }
-//                }
-//            } catch (RedisCommandTimeoutException e) {
-//                System.out.println("Redis 连接断开，直接从数据库获取book: " + bookid);
-//                temp = bookRepository.getById(bookid);
-//            }
 
             int s = temp.getSurplus() - number;
             temp.setSurplus(s);
             pay += temp.getPrice() * number;
             bookRepository.saveAndFlush(temp);
-//            redisUtil.hset("book:" + bookid, "surplus", s);
         }
         return pay;
     }
@@ -117,11 +117,11 @@ public class BookDaoimpl implements BookDao {
         bookRepository.save(toBeRemove);
         bookRepository.flush();
         //存在就设置，不存在就罢辽
-        try {
-            redisUtil.hset("book:" + toBeRemove.getBookId(), "show_status", 0);
-        } catch (RedisCommandTimeoutException e) {
-            System.out.println("Redis 连接断开，无需更新缓存中的数据 ");
-        }
+//        try {
+//            redisUtil.hset("book:" + toBeRemove.getBookId(), "show_status", 0);
+//        } catch (RedisCommandTimeoutException e) {
+//            System.out.println("Redis 连接断开，无需更新缓存中的数据 ");
+//        }
 
         return true;
     }
@@ -139,35 +139,40 @@ public class BookDaoimpl implements BookDao {
         newBook.setIsbn(isbn);
         newBook.setShowStatus(1);
         bookRepository.save(newBook);
+        BookImage image = new BookImage(bookRepository.getMaxBookId(), img);
+        bookImageRepository.save(image);
         return true;
     }
 
     @Override
     public boolean modifyBook(Book newBook) {
         Book temp = bookRepository.getById(newBook.getBookId());
+        BookImage image = bookImageRepository.findById(newBook.getBookId()).get();
         temp.setName(newBook.getName());
         temp.setIsbn(newBook.getIsbn());
         temp.setDiscription(newBook.getDiscription());
         temp.setImage(newBook.getImage());
+        image.setUrl(newBook.getImage());
         temp.setBookType(newBook.getBookType());
         temp.setAuthor(newBook.getAuthor());
         temp.setPrice(newBook.getPrice());
         temp.setSurplus(newBook.getSurplus());
         bookRepository.save(temp);
-        int bookid = newBook.getBookId();
-        try {
-            Object b = redisUtil.get("book:" + bookid);
-            if (b != null) {
-                System.out.println("Book: " + bookid + " already in Redis!");
-                try {
-                    addToRedis(temp);
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
-            }
-        } catch (RedisCommandTimeoutException e) {
-            System.out.println("Redis 连接断开，无需更新缓存中的数据 ");
-        }
+        bookImageRepository.save(image);
+//        int bookid = newBook.getBookId();
+//        try {
+//            Object b = redisUtil.get("book:" + bookid);
+//            if (b != null) {
+//                System.out.println("Book: " + bookid + " already in Redis!");
+//                try {
+//                    addToRedis(temp);
+//                } catch (JsonProcessingException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        } catch (RedisCommandTimeoutException e) {
+//            System.out.println("Redis 连接断开，无需更新缓存中的数据 ");
+//        }
         return true;
     }
 
@@ -178,7 +183,31 @@ public class BookDaoimpl implements BookDao {
 
     @Override
     public List<Book> getAllBooks() {
-        return bookRepository.findAll();
+        List<Book> list = bookRepository.findAll();
+        int size = list.size();
+        for (int i = 0; i < size; i++) {
+            Book temp = list.get(i);
+            temp.setImage(bookImageRepository.findById(i + 1).get().getUrl());
+            list.set(i, temp);
+        }
+        return list;
     }
 
+    @Override
+    public List<Book> searchBookByTag(String tag) {
+        List<BookType> tagLists = bookTypeRepository.searchTag(tag);
+        List<Book> retList = new ArrayList<>();
+        Set<Book> retSet = new HashSet<>();
+        tagLists.forEach(tagname -> {
+            retSet.addAll(bookRepository.findBookByBookTypeLike("%"+tagname.getName()+"%"));
+        });
+        retList.addAll(retSet);
+        // add book cover
+        retList.forEach(book->{
+            Optional<BookImage> image = bookImageRepository.findById(book.getBookId());
+            String url = image.get().getUrl();
+            book.setImage(image.get().getUrl());
+        });
+        return retList;
+    }
 }

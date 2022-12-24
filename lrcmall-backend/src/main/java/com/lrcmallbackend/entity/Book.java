@@ -33,6 +33,7 @@ public class Book {
     private String bookType;
     @Indexed(name = "description", type = "string")
     private String discription;
+    @Transient
     private String image;
     private int price;
     private String isbn;

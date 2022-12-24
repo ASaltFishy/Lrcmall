@@ -12,4 +12,6 @@ public interface BookService {
     boolean modifyBook(Book newBook);
     List<Book> searchBook(String keyword);
     void setBookSolr();
+    List<Book> searchBookByTag(String tag);
+
 }

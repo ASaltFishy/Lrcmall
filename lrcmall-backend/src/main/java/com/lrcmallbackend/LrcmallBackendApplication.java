@@ -9,9 +9,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 import org.springframework.kafka.config.TopicBuilder;
 
 @SpringBootApplication
+@EnableNeo4jRepositories
 public class LrcmallBackendApplication {
 
     //kafka 消息topic

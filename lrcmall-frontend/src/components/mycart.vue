@@ -3,11 +3,11 @@
   <div class="booklist">
     <el-table :data="cartData" border>
       <el-table-column type="selection" width="55" />
-      <el-table-column label="封面" width="110">
+      <!-- <el-table-column label="封面" width="110">
         <template v-slot="scope">
           <img :src="scope.row.image" alt="" height="50" />
-        </template>
-      </el-table-column>
+        </template> 
+      </el-table-column> -->
       <el-table-column label="书名">
         <template v-slot="scope">
           <el-link @click="skiptodetail(scope.row.bookId)">{{

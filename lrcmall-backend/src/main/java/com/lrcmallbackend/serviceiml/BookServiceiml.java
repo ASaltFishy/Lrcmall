@@ -93,4 +93,9 @@ public class BookServiceiml implements BookService {
 
     }
 
+    @Override
+    public List<Book> searchBookByTag(String tag){
+        return bookDao.searchBookByTag(tag);
+    }
+
 }
